@@ -2,6 +2,7 @@
 
 #[cfg(feature = "experimental-inspect")]
 use crate::introspection::{introspection_id_const, module_introspection_code};
+use crate::utils::expr_to_python;
 use crate::{
     attributes::{
         self, kw, take_attributes, take_pyo3_options, CrateAttribute, GILUsedAttribute,
@@ -149,6 +150,9 @@ pub fn pymodule_module_impl(
     }
 
     let mut pymodule_init = None;
+    let mut module_consts = Vec::new();
+    let mut module_consts_values = Vec::new();
+    let mut module_consts_cfg_attrs = Vec::new();
 
     for item in &mut *items {
         match item {
@@ -168,7 +172,7 @@ pub fn pymodule_module_impl(
             Item::Fn(item_fn) => {
                 ensure_spanned!(
                     !has_attribute(&item_fn.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
                 let is_pymodule_init =
                     find_and_remove_attribute(&mut item_fn.attrs, "pymodule_init");
@@ -199,7 +203,7 @@ pub fn pymodule_module_impl(
             Item::Struct(item_struct) => {
                 ensure_spanned!(
                     !has_attribute(&item_struct.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
                 if has_attribute(&item_struct.attrs, "pyclass")
                     || has_attribute_with_namespace(
@@ -227,7 +231,7 @@ pub fn pymodule_module_impl(
             Item::Enum(item_enum) => {
                 ensure_spanned!(
                     !has_attribute(&item_enum.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
                 if has_attribute(&item_enum.attrs, "pyclass")
                     || has_attribute_with_namespace(&item_enum.attrs, Some(pyo3_path), &["pyclass"])
@@ -251,7 +255,7 @@ pub fn pymodule_module_impl(
             Item::Mod(item_mod) => {
                 ensure_spanned!(
                     !has_attribute(&item_mod.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
                 if has_attribute(&item_mod.attrs, "pymodule")
                     || has_attribute_with_namespace(&item_mod.attrs, Some(pyo3_path), &["pymodule"])
@@ -278,61 +282,63 @@ pub fn pymodule_module_impl(
             Item::ForeignMod(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             Item::Trait(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             Item::Const(item) => {
-                ensure_spanned!(
-                    !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
-                );
+                if !find_and_remove_attribute(&mut item.attrs, "pymodule_export") {
+                    continue;
+                }
+                module_consts.push(item.ident.clone());
+                module_consts_values.push(expr_to_python(&item.expr));
+                module_consts_cfg_attrs.push(get_cfg_attributes(&item.attrs));
             }
             Item::Static(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             Item::Macro(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             Item::ExternCrate(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             Item::Impl(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             Item::TraitAlias(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             Item::Type(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             Item::Union(item) => {
                 ensure_spanned!(
                     !has_attribute(&item.attrs, "pymodule_export"),
-                    item.span() => "`#[pymodule_export]` may only be used on `use` statements"
+                    item.span() => "`#[pymodule_export]` may only be used on `use` or `const` statements"
                 );
             }
             _ => (),
@@ -345,6 +351,9 @@ pub fn pymodule_module_impl(
         &name.to_string(),
         &module_items,
         &module_items_cfg_attrs,
+        &module_consts,
+        &module_consts_values,
+        &module_consts_cfg_attrs,
     );
     #[cfg(not(feature = "experimental-inspect"))]
     let introspection = quote! {};
@@ -372,6 +381,8 @@ pub fn pymodule_module_impl(
         options.gil_used.map_or(true, |op| op.value.value),
     );
 
+    let module_consts_names = module_consts.iter().map(|i| i.unraw().to_string());
+
     Ok(quote!(
         #(#attrs)*
         #vis #mod_token #ident {
@@ -387,6 +398,12 @@ pub fn pymodule_module_impl(
                     #(#module_items_cfg_attrs)*
                     #module_items::_PYO3_DEF.add_to_module(module)?;
                 )*
+
+                #(
+                    #(#module_consts_cfg_attrs)*
+                    #pyo3_path::types::PyModuleMethods::add(module, #module_consts_names, #module_consts)?;
+                )*
+
                 #pymodule_init
                 ::std::result::Result::Ok(())
             }
@@ -420,7 +437,8 @@ pub fn pymodule_function_impl(
     );
 
     #[cfg(feature = "experimental-inspect")]
-    let introspection = module_introspection_code(pyo3_path, &name.to_string(), &[], &[]);
+    let introspection =
+        module_introspection_code(pyo3_path, &name.to_string(), &[], &[], &[], &[], &[]);
     #[cfg(not(feature = "experimental-inspect"))]
     let introspection = quote! {};
     #[cfg(feature = "experimental-inspect")]
@@ -476,7 +494,7 @@ fn module_initialization(
     gil_used: bool,
 ) -> TokenStream {
     let Ctx { pyo3_path, .. } = ctx;
-    let pyinit_symbol = format!("PyInit_{}", name);
+    let pyinit_symbol = format!("PyInit_{name}");
     let name = name.to_string();
     let pyo3_name = LitCStr::new(CString::new(name).unwrap(), Span::call_site(), ctx);
 

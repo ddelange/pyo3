@@ -1,8 +1,9 @@
-#[cfg(all(Py_3_10, not(PyPy), not(Py_LIMITED_API)))]
-use crate::frameobject::PyFrameObject;
 use crate::moduleobject::PyModuleDef;
 use crate::object::PyObject;
 use std::os::raw::c_int;
+
+#[cfg(all(Py_3_10, not(PyPy), not(Py_LIMITED_API)))]
+use crate::PyFrameObject;
 
 #[cfg(not(PyPy))]
 use std::os::raw::c_long;
@@ -87,12 +88,7 @@ struct HangThread;
 impl Drop for HangThread {
     fn drop(&mut self) {
         loop {
-            #[cfg(target_family = "unix")]
-            unsafe {
-                libc::pause();
-            }
-            #[cfg(not(target_family = "unix"))]
-            std::thread::sleep(std::time::Duration::from_secs(9_999_999));
+            std::thread::park(); // Block forever.
         }
     }
 }

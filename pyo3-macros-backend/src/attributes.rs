@@ -27,6 +27,7 @@ pub mod kw {
     syn::custom_keyword!(hash);
     syn::custom_keyword!(into_py_with);
     syn::custom_keyword!(item);
+    syn::custom_keyword!(immutable_type);
     syn::custom_keyword!(from_item_all);
     syn::custom_keyword!(mapping);
     syn::custom_keyword!(module);
@@ -45,6 +46,7 @@ pub mod kw {
     syn::custom_keyword!(transparent);
     syn::custom_keyword!(unsendable);
     syn::custom_keyword!(weakref);
+    syn::custom_keyword!(generic);
     syn::custom_keyword!(gil_used);
 }
 

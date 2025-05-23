@@ -609,7 +609,7 @@ mod tests {
     fn test_debug_string() {
         Python::with_gil(|py| {
             let s = "Hello\n".into_pyobject(py).unwrap();
-            assert_eq!(format!("{:?}", s), "'Hello\\n'");
+            assert_eq!(format!("{s:?}"), "'Hello\\n'");
         })
     }
 
@@ -617,7 +617,7 @@ mod tests {
     fn test_display_string() {
         Python::with_gil(|py| {
             let s = "Hello\n".into_pyobject(py).unwrap();
-            assert_eq!(format!("{}", s), "Hello\n");
+            assert_eq!(format!("{s}"), "Hello\n");
         })
     }
 
@@ -647,7 +647,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(Py_LIMITED_API, PyPy)))]
+    #[cfg(not(any(Py_LIMITED_API, PyPy, GraalPy)))]
     fn test_string_data_ucs1() {
         Python::with_gil(|py| {
             let s = PyString::new(py, "hello, world");
@@ -660,7 +660,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(Py_LIMITED_API, PyPy)))]
+    #[cfg(not(any(Py_LIMITED_API, PyPy, GraalPy)))]
     fn test_string_data_ucs1_invalid() {
         Python::with_gil(|py| {
             // 0xfe is not allowed in UTF-8.
@@ -686,7 +686,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(Py_LIMITED_API, PyPy)))]
+    #[cfg(not(any(Py_LIMITED_API, PyPy, GraalPy)))]
     fn test_string_data_ucs2() {
         Python::with_gil(|py| {
             let s = py.eval(ffi::c_str!("'foo\\ud800'"), None, None).unwrap();
@@ -702,7 +702,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(not(any(Py_LIMITED_API, PyPy)), target_endian = "little"))]
+    #[cfg(all(not(any(Py_LIMITED_API, PyPy, GraalPy)), target_endian = "little"))]
     fn test_string_data_ucs2_invalid() {
         Python::with_gil(|py| {
             // U+FF22 (valid) & U+d800 (never valid)
@@ -728,7 +728,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(Py_LIMITED_API, PyPy)))]
+    #[cfg(not(any(Py_LIMITED_API, PyPy, GraalPy)))]
     fn test_string_data_ucs4() {
         Python::with_gil(|py| {
             let s = "哈哈🐈";
@@ -741,7 +741,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(not(any(Py_LIMITED_API, PyPy)), target_endian = "little"))]
+    #[cfg(all(not(any(Py_LIMITED_API, PyPy, GraalPy)), target_endian = "little"))]
     fn test_string_data_ucs4_invalid() {
         Python::with_gil(|py| {
             // U+20000 (valid) & U+d800 (never valid)
